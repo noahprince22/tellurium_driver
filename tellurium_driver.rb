@@ -1,24 +1,27 @@
-#sdlfkjkkjjllklskdjfkjlkjlksjdfkljkj
 require "bundler"
 Bundler.require(:default)
 #Provides added functionality to Selenium WebDriver
 class TelluriumDriver
-
+  #takes browser name, browser version, hub ip(optional) 
   def initialize(*args)
-    browser, version = args
-    @wait = Selenium::WebDriver::Wait.new(:timeout=>120)
-    is_ie = !version.nil?
-    is_local_firefox = args.size == 3
 
-    if is_local_firefox
-     @driver = Selenium::WebDriver.for :chrome
+    browser, version,hub_ip = args
+    @wait = Selenium::WebDriver::Wait.new(:timeout=>120)
+    binding.pry
+    is_ie = browser.include?("internet") && version
+    is_local_chrome = browser.include?("chrome") && version.include?("local")
+    is_local_firefox = browser.include?("firefox")&& version.include?("local")
+
+    if is_local_chrome
+      @driver = Selenium::WebDriver.for :chrome
+    elsif is_local_firefox
+      @driver = Selenium::WebDriver.for :firefox
     elsif is_ie
       caps = Selenium::WebDriver::Remote::Capabilities.internet_explorer
-      caps.version = version
-      caps.platform = "VISTA"
-      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>caps,:url=> "http://10.100.5.23:4444/wd/hub")
+      caps.version = version    
+      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>caps,:url=> "http://#{hub_ip}:4444/wd/hub")
     else
-      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>browser,:url=> "http://10.100.5.23:4444/wd/hub")
+      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>browser,:url=> "http://#{hub_ip}:4444/wd/hub")
     end
     
   end
@@ -27,14 +30,19 @@ class TelluriumDriver
     @driver
   end
 
+  def method_missing(sym, *args, &block)
+    @driver.send sym,*args,&block
+  end
+
   def go_to(url)
     current_name = driver.title
     driver.get url
 
+    #wait until the current title changes to see that you're at a new url
     @wait.until { driver.title != current_name }
   end
-  
-  def load_website_and_wait_for_element(url,arg1,id)#takes a url, the symbol of what you wait to exist and the id/name/xpath, whatever of what you want to wait to exist
+  #takes a url, the symbol of what you wait to exist and the id/name/xpath, whatever of what you want to wait to exist
+  def load_website_and_wait_for_element(url,arg1,id)
     current_name = driver.title
     driver.get url
 
@@ -69,7 +77,6 @@ class TelluriumDriver
   end
 
   def wait_for_element(element)
-      i = 0
       @wait.until {
           bool = false
 
@@ -105,7 +112,7 @@ class TelluriumDriver
    @wait.until {
     element_arr = driver.find_elements(sym,id)
     element_arr.size > 0 and element_arr[0].displayed? #wait until the element both exists and is displayed
-  }
+   }
   end
   
   def wait_and_click(sym, id)
@@ -172,20 +179,10 @@ class TelluriumDriver
   end
 
   def send_keys_leasing(sym,id,value)
+    self.wait_to_appear(sym,id)
     self.driver.find_element(sym,id).send_keys(value) 
   end
-  
-  def wait_and_click_leasing(value,value1,value3="")
-    self.wait_and_click(:css,"[data-field='#{value}\[#{value1}\]'] #{value3}") 
-  end
 
-  def fillout_leasing(form,name,value)
-    self.wait_and_click_leasing(form,name)
-    self.send_keys_leasing(:css,".input-medium:enabled",value)
-    element = driver.find_element(:css,"button.btn.editable-submit:enabled")
-    self.wait_for_element_and_click(element)
-    self.wait_for_element_to_dissappear(element)
-  end
   #takes the id you want to click, the id you want to exist.(Example, I click start-application and wait for the next dialogue box to exist
   def click_and_wait_to_exist(*args) 
      case args.size
@@ -209,13 +206,20 @@ class TelluriumDriver
         error
      end
   end
-
+  
   def form_fillout(hash) #takes a hash of ID's with values to fillout
     hash.each do |id,value|
       self.wait_to_appear(:id,id)
        self.send_keys(:id,id,value)
     end
 
+  end
+  
+  def form_fillout_editable(selector,hash)
+    hash.each do |id,value|
+      name = "#{selector}\[#{id}\]"
+      driver.execute_script("$('[data-field=\"#{name}\"]').editable('setValue', '#{value}');")
+    end
   end
   
   def form_fillout_selector(hash)
@@ -242,7 +246,7 @@ class TelluriumDriver
     } 
     self.hover_click(@element)
   end
-  
+
   def close
     driver.quit
   end
