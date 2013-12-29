@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'tellurium_driver'
-  s.version     = '1.1.4'
+  s.version     = '1.1.10'
   s.date        = '2013-11-19'
   s.summary     = "Extends the functionality of Selenium WebDriver"
   s.description = "Provides useful extra methods for Selenium WebDriver, especially helpful in javascript webapps"

@@ -1,27 +1,39 @@
-require "bundler"
-Bundler.require(:default)
-#Provides added functionality to Selenium WebDriverl
+#Provides added functionality to Selenium WebDriver
 class TelluriumDriver
   #takes browser name, browser version, hub ip(optional) 
   def initialize(*args)
 
-    browser, version,hub_ip = args
-    @wait = Selenium::WebDriver::Wait.new(:timeout=>120)
+    browser, version,hub_ip,timeout = args
+    timeout = 120 unless timeout
+    @wait = Selenium::WebDriver::Wait.new(:timeout=>timeout)
 
+    is_local = version.include?("local") if version
     is_ie = browser.include?("internet") && version
-    is_local_chrome = browser.include?("chrome") && version.include?("local")
-    is_local_firefox = browser.include?("firefox")&& version.include?("local")
+    is_chrome = browser.include?("chrome")
+    is_firefox = browser.include?("firefox") 
 
-    if is_local_chrome
-      @driver = Selenium::WebDriver.for :chrome
-    elsif is_local_firefox
-      @driver = Selenium::WebDriver.for :firefox
+    if is_chrome && is_local
+      caps = {
+        :browserName => "chrome",
+        :idleTimeout => timeout
+        # :screenshot => true
+      }
+      @driver = Selenium::WebDriver.for :chrome,:desired_capabilities=>caps
+    elsif is_firefox && is_local
+      caps = {
+        :browserName => "firefox",
+        :idleTimeout => timeout,
+        :screenshot => true
+      }
+      @driver = Selenium::WebDriver.for :firefox, :desired_capabilities=>caps
     elsif is_ie
       caps = Selenium::WebDriver::Remote::Capabilities.internet_explorer
       caps.version = version    
       @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>caps,:url=> "http://#{hub_ip}:4444/wd/hub")
-    else
-      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>browser,:url=> "http://#{hub_ip}:4444/wd/hub")
+    elsif is_chrome
+      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>:chrome,:url=> "http://#{hub_ip}:4444/wd/hub")
+    elsif is_firefox
+      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>:firefox,:url=> "http://#{hub_ip}:4444/wd/hub")
     end
     
   end
@@ -30,11 +42,29 @@ class TelluriumDriver
     @driver
   end
 
+  def self.before(*names)
+    names.each do |name|
+      m = instance_method(name)
+      define_method(name) do |*args, &block|  
+        yield
+        m.bind(self).(*args, &block)
+      end
+    end
+  end
+
+  def document_ready
+    @wait.until{ driver.execute_script(document.readyState) == "complete" }
+  end
+
   def method_missing(sym, *args, &block)
     @driver.send sym,*args,&block
   end
 
   def go_to(url)
+    driver.get url
+  end
+
+  def go_to_and_wait_to_load(url)
     current_name = driver.title
     driver.get url
 
@@ -249,5 +279,7 @@ class TelluriumDriver
   def close
     driver.quit
   end
+
+  before(*instance_methods) { self.document_ready }
 
 end 
