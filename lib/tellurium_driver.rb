@@ -1,6 +1,16 @@
 #Provides added functionality to Selenium WebDriver
 class TelluriumDriver
   #takes browser name, browser version, hub ip(optional) 
+  def self.before(names)
+    names.each do |name|
+      m = instance_method(name)
+      define_method(name) do |*args, &block|  
+        yield
+        m.bind(self).(*args, &block)
+      end
+    end
+  end
+
   def initialize(*args)
 
     browser, version,hub_ip,timeout = args
@@ -35,26 +45,25 @@ class TelluriumDriver
     elsif is_firefox
       @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>:firefox,:url=> "http://#{hub_ip}:4444/wd/hub")
     end
-    
+
   end
+
+
+  TelluriumDriver.before(TelluriumDriver.instance_methods.reject { |name| name.to_s.include?("initialize")}) do
+    begin
+    wait = Selenium::WebDriver::Wait.new(:timeout=>120)
+    wait.until{ self.driver.execute_script("document.readyState") == "complete" }
+    rescue Exception => e
+    puts e.message
+    end
+
+  end
+
   
   def driver
     @driver
   end
 
-  def self.before(*names)
-    names.each do |name|
-      m = instance_method(name)
-      define_method(name) do |*args, &block|  
-        yield
-        m.bind(self).(*args, &block)
-      end
-    end
-  end
-
-  def document_ready
-    @wait.until{ driver.execute_script(document.readyState) == "complete" }
-  end
 
   def method_missing(sym, *args, &block)
     @driver.send sym,*args,&block
@@ -280,6 +289,8 @@ class TelluriumDriver
     driver.quit
   end
 
-  before(*instance_methods) { self.document_ready }
+  def document_ready
+
+  end
 
 end 
