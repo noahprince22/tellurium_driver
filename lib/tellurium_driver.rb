@@ -10,9 +10,13 @@ class TelluriumDriver
       end
     end
   end
-
+  
+  #@sets up this instance of TelluriumDriver
+  #@param [String] browser, "chrome","firefox", or "internet explorer"
+  #@param [Integer] version, the version of the browser. nil for firefox or chrome, or "local" to run locally
+  #@param hub_ip [String] the IP address of the Selenium Grid hub to test on
+  #@param [Integer] timeout, the timeout to use on test
   def initialize(*args)
-
     browser, version,hub_ip,timeout = args
     timeout = 120 unless timeout
     @wait = Selenium::WebDriver::Wait.new(:timeout=>timeout)
@@ -69,10 +73,13 @@ class TelluriumDriver
     @driver.send sym,*args,&block
   end
 
+  #@param [String] url, the url to point the driver at
   def go_to(url)
     driver.get url
   end
 
+  #Waits for the title to change after going to a url
+  #@param [String] url, the url to go to
   def go_to_and_wait_to_load(url)
     current_name = driver.title
     driver.get url
@@ -80,6 +87,7 @@ class TelluriumDriver
     #wait until the current title changes to see that you're at a new url
     @wait.until { driver.title != current_name }
   end
+  
   #takes a url, the symbol of what you wait to exist and the id/name/xpath, whatever of what you want to wait to exist
   def load_website_and_wait_for_element(url,arg1,id)
     current_name = driver.title
@@ -87,10 +95,10 @@ class TelluriumDriver
 
     @wait.until { driver.title != current_name and driver.find_elements(arg1, id).size > 0 }
   end
-
-  #takes the id you want to click, the id you want to change, and the value of the id you want
-  # to change. (Example, I click start-application and wait for the next dialogue
-  # box to not be hidden)
+  
+  #clicks one element and waits for another one to change it's value. 
+  #@param [String] id_to_click, the id you want to click
+  #@param [String] id_to_change you
   def click_and_wait_to_change(id_to_click,id_to_change,value) 
     element_to_click = driver.find_element(:id, id_to_click)
     element_to_change = driver.find_element(:id, id_to_change)
@@ -100,11 +108,15 @@ class TelluriumDriver
     @wait.until { element_to_change.attribute(value.to_sym) != current_value }
   end
 
+  #Fills in a value for form selectors
+  #@param [Symbol] sym, usually :id, :css, or :name
+  #@param [String] selector_value, the value to set the selector to
   def click_selector(sym,id,selector_value)
     option = Selenium::WebDriver::Support::Select.new(driver.find_element(sym.to_sym,id))
     option.select_by(:text, selector_value)
   end
 
+  #Fills out a selector and waits for another id to change
   def click_selector_and_wait(id_to_click,selector_value,id_to_change,value)
     element_to_change = driver.find_element(:id => id_to_change)
     current_value = element_to_change.attribute(value.to_sym)
@@ -115,6 +127,8 @@ class TelluriumDriver
     @wait.until { element_to_change.attribute(value.to_sym) != current_value }
   end
 
+  #Waits for an element to be displayed
+  #@param [SeleniumWebdriver::Element]
   def wait_for_element(element)
       @wait.until {
           bool = false
@@ -129,6 +143,9 @@ class TelluriumDriver
       }
   end
 
+  #Waits for the element with specified identifiers to disappear
+  #@param [Symbol] sym
+  #@param [String] id
   def wait_to_disappear(sym,id)
    @wait.until {
     element_arr = driver.find_elements(sym,id)
@@ -136,6 +153,8 @@ class TelluriumDriver
   }
   end
 
+  #waits for an element to disappear
+  #@param [SeleniumWebdriver::Element] element
   def wait_for_element_to_disappear(element)
     @wait.until {
       begin
@@ -145,14 +164,18 @@ class TelluriumDriver
       end
     }
   end
-  
+
+  #@param [Symbol] sym
+  #@param [String] id, the string associated with the symbol to identify the elementw
   def wait_to_appear(sym,id)
    @wait.until {
     element_arr = driver.find_elements(sym,id)
     element_arr.size > 0 and element_arr[0].displayed? #wait until the element both exists and is displayed
    }
   end
-  
+
+  # to change. (Example, I click start-application and wait for the next dialogue
+  # box to not be hidden)
   def wait_and_click(sym, id)
    found_element = false
 
@@ -181,7 +204,9 @@ class TelluriumDriver
     end
     
   end
- 
+
+  # Waits for an element to be displayed and click it
+  #@param [SeleniumWebdriver::Element] 
   def wait_for_element_and_click(element)
     wait_for_element(element)
     
@@ -197,7 +222,8 @@ class TelluriumDriver
     
   end
 
-#hovers where the element is and clicks. Workaround for timeout on click that happened with the new update to the showings app
+  #hovers where the element is and clicks. Workaround for timeout on click that happened with the new update to the showings app
+  #@param [SeleniumWebdriver::Element] element OR can take sym,id
   def hover_click(*args)
     if args.size == 1
     driver.action.click(element).perform
@@ -208,9 +234,14 @@ class TelluriumDriver
 
   end
 
+  #fills an input of the given sym,id with a value
+  #@param [Symbol] sym
+  #@param [String] id
+  #@param [String] value
   def send_keys(sym,id,value)
     #self.wait_and_click(sym, id)
     #driver.action.send_keys(driver.find_element(sym => id),value).perform
+    wait_to_appear(sym,id)
     element = driver.find_element(sym,id)
     element.click
     element.send_keys(value)
