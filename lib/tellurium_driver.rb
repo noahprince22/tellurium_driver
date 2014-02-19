@@ -1,5 +1,9 @@
 #Provides added functionality to Selenium WebDriver
 class TelluriumDriver
+  class << self
+    attr_accessor :wait_for_document_ready
+  end
+  
   #takes browser name, browser version, hub ip(optional) 
   def self.before(names)
     names.each do |name|
@@ -20,7 +24,8 @@ class TelluriumDriver
     browser, version,hub_ip,timeout = args
     timeout = 120 unless timeout
     @wait = Selenium::WebDriver::Wait.new(:timeout=>timeout)
-
+    TelluriumDriver.wait_for_document_ready=true;
+    
     is_local = version.include?("local") if version
     is_ie = browser.include?("internet") && version
     is_chrome = browser.include?("chrome")
@@ -55,15 +60,15 @@ class TelluriumDriver
 
   TelluriumDriver.before(TelluriumDriver.instance_methods.reject { |name| name.to_s.include?("initialize")}) do
     begin
-    wait = Selenium::WebDriver::Wait.new(:timeout=>120)
-    wait.until{ self.driver.execute_script("document.readyState") == "complete" }
+      if(TelluriumDriver.wait_for_document_ready)
+        wait = Selenium::WebDriver::Wait.new(:timeout=>120)
+        wait.until{ self.driver.execute_script("document.readyState") == "complete" }
+      end
     rescue Exception => e
-    puts e.message
+      puts e.message
     end
-
   end
 
-  
   def driver
     @driver
   end
