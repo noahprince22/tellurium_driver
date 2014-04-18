@@ -26,7 +26,7 @@ class TelluriumDriver
     @wait = Selenium::WebDriver::Wait.new(:timeout=>timeout)
     TelluriumDriver.wait_for_document_ready=true;
     
-    is_local = version.include?("local") if version
+    is_local = version.include?("local") if version and version.is_a? String
     is_ie = browser.include?("internet") && version
     is_chrome = browser.include?("chrome")
     is_firefox = browser.include?("firefox") 
