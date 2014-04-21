@@ -47,7 +47,7 @@ class TelluriumDriver
       @driver = Selenium::WebDriver.for :firefox, :desired_capabilities=>caps
     elsif is_ie
       caps = Selenium::WebDriver::Remote::Capabilities.internet_explorer
-      caps.version = version    
+      caps.version = version.to_s
       @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>caps,:url=> "http://#{hub_ip}:4444/wd/hub")
     elsif is_chrome
       @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>:chrome,:url=> "http://#{hub_ip}:4444/wd/hub")
