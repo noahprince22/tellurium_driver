@@ -67,7 +67,6 @@ To see all of the calls, check out the rdoc
 # Contributing
 
 Want to contribute?
-=======
 
 1. Fork it.
 2. Create a branch (`git checkout -b my_change`)
