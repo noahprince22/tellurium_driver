@@ -69,7 +69,6 @@ To see all of the calls, check out the rdoc
 Want to contribute?
 =======
 
-
 1. Fork it.
 2. Create a branch (`git checkout -b my_change`)
 3. Commit your changes (`git commit -am "Added new_method"`)
