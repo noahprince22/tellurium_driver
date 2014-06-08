@@ -19,8 +19,8 @@ To use a local instance of tellurium driver on chrome, do:
 
 To use a remote instance of IE10 on a hub located at url http://192.168.1.1:4444/wd/hub
 
-		driver = TelluriumDriver.new(browser: "internet_explorer",
-									version: 10,
+		driver = TelluriumDriver.new(browser: "internet explorer",
+									version: "10",
 									hub_url: "http://192.168.1.1:4444/wd/hub")
 
 Basic Calls

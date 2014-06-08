@@ -23,7 +23,7 @@ class TelluriumDriver
   # ==== Options
   #
   # * +:browser+ - "chrome","firefox", "safari" or "internet explorer"
-  # * +:version+ - the version of the browser. Not needed for safari, chrome, or firefox
+  # * +:version+ - [String] the version of the browser. Not needed for safari, chrome, or firefox. 
   # * +:hub_ip+ - the IP address of the Selenium Grid hub to test on. 
   #   * Will use http://hub_ip:4444/wd/hub. If this is not correct, use :hub_url
   # * +:hub_url+ - the full url address of the Selenium Grid hub to test on
@@ -39,7 +39,7 @@ class TelluriumDriver
   #    TelluriumDriver.new(browser: "chrome") 
   #
   # Run an IE10 instance on the grid with ip 192.168.1.1
-  #    TelluriumDriver.new(browser: "internet_explorer", version: 10, hub_ip: 192.168.1.1)
+  #    TelluriumDriver.new(browser: "internet explorer", version: "10", hub_ip: 192.168.1.1)
   def initialize(opts = {})
     opts[:timeout] = 120 unless opts[:timeout]
     @wait = Selenium::WebDriver::Wait.new(:timeout=>opts[:timeout])
@@ -54,7 +54,7 @@ class TelluriumDriver
     if is_local
       @driver = Selenium::WebDriver.for(opts[:browser].to_sym,:desired_capabilities=>opts[:caps])
     else
-      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>opts[:caps],:url=> "http://#{hub_ip}:4444/wd/hub")
+      @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>opts[:caps],:url=> "http://#{opts[:hub_ip]}:4444/wd/hub")
     end
   end
 
