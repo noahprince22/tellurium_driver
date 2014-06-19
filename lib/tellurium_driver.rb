@@ -1,3 +1,9 @@
+
+require 'rubygems'
+require 'bundler/setup'
+require 'sauce'
+require 'sauce-connect'
+
 # Provides added functionality to Selenium WebDriver
 #
 # Author:: Noah Prince (mailto:noahprince8@gmail.com)
@@ -10,33 +16,35 @@ class TelluriumDriver
   def self.before(names)
     names.each do |name|
       m = instance_method(name)
-      define_method(name) do |*args, &block|  
+      define_method(name) do |*args, &block|
         yield
         m.bind(self).(*args, &block)
       end
     end
   end
   # :doc:
-  
+
   # Sets up this instance of TelluriumDriver
   #
   # ==== Options
   #
-  # * +:browser+ - "chrome","firefox", "safari" or "internet explorer"
-  # * +:version+ - [String] the version of the browser. Not needed for safari, chrome, or firefox. 
-  # * +:hub_ip+ - the IP address of the Selenium Grid hub to test on. 
+  # * +:browser+ - [String] "chrome","firefox", "safari" or "internet explorer"
+  # * +:version+ - [String] the version of the browser. Not needed for safari, chrome, or firefox.
+  # * +:hub_ip+ - the IP address of the Selenium Grid hub to test on.
   #   * Will use http://hub_ip:4444/wd/hub. If this is not correct, use :hub_url
   # * +:hub_url+ - the full url address of the Selenium Grid hub to test on
-  #   * WARNING: DO NOT USE BOTH hub_ip and hub_url
+  #   * WARNING: DO NOT USE BOTH hub_ip and hub_url, or hub_ip and hub_url with sauce set to true.
   #   * NOTE: If either hub_ip or hub_url is present, tests will not run locally
   # * +:caps+ - see https://code.google.com/p/selenium/wiki/DesiredCapabilities
   #   * Not necessary, but will give the browser any extra desired functionality
   # * +:timeout+ - Number of seconds for all Tellurium wait commands. Default 120
-  #
+  #   +:sauce+ - If true, uses sauce ENV["SAUCEUSER"] and ENV["SAUCEKEY"] and
+  #              uses Sauce hub. Dont use with hub_ur/ or hub_ip
+  #   +:os+ -     [String] If using sauce, give os version you want
   # ==== Examples
   #
-  # Run a local chrome instance 
-  #    TelluriumDriver.new(browser: "chrome") 
+  # Run a local chrome instance
+  #    TelluriumDriver.new(browser: "chrome")
   #
   # Run an IE10 instance on the grid with ip 192.168.1.1
   #    TelluriumDriver.new(browser: "internet explorer", version: "10", hub_ip: 192.168.1.1)
@@ -50,10 +58,18 @@ class TelluriumDriver
     opts[:caps][:version] ||= opts[:version]
 
     is_local = !opts[:hub_ip] and !opts[:hub_url]
-    
-    if is_local
+
+    if opts[:sauce]
+      @driver = Sauce::Selenium2.new(
+        username: ENV["SAUCEUSER"],
+        access_key: ENV["SAUCEKEY"],
+        browser: opts[:browser],
+        version: opts[:version],
+        os: opts[:os]
+      )
+    elsif is_local
       @driver = Selenium::WebDriver.for(opts[:browser].to_sym,:desired_capabilities=>opts[:caps])
-    else
+    elsif !opts[:sauce]
       @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>opts[:caps],:url=> "http://#{opts[:hub_ip]}:4444/wd/hub")
     end
   end
@@ -132,13 +148,13 @@ class TelluriumDriver
               bool = true
               @element = element
               break
-           end       
+           end
 
          bool == true
       }
   end
 
-  # Waits for the element with specified identifiers to disappear 
+  # Waits for the element with specified identifiers to disappear
   #
   # ==== Attributes
   #
@@ -177,7 +193,7 @@ class TelluriumDriver
     }
   end
 
-  # Waits for the element with specified identifiers to appear 
+  # Waits for the element with specified identifiers to appear
   #
   # ==== Attributes
   #
@@ -194,7 +210,7 @@ class TelluriumDriver
    }
   end
 
-  # Waits for the element with specified identifiers to appear, then clicks it 
+  # Waits for the element with specified identifiers to appear, then clicks it
   #
   # ==== Attributes
   #
@@ -214,10 +230,10 @@ class TelluriumDriver
         if element.displayed? and element.enabled?
           @element=element
           found_element = true
-        end 
-      
+        end
+
       end
-     found_element   
+     found_element
     end
 
     i = 0
@@ -228,9 +244,9 @@ class TelluriumDriver
       i+=1
       sleep(1)
       retry if i<20
-      raise ex 
+      raise ex
     end
-    
+
   end
 
   # Waits for the given element to appear and clicks it
@@ -240,7 +256,7 @@ class TelluriumDriver
   # * +element+ - Selenium::WebDriver::Element to appear
   def wait_for_element_and_click(element)
     wait_for_element(element)
-    
+
     i = 0
     begin
       @element.click
@@ -248,9 +264,9 @@ class TelluriumDriver
       i+=1
       sleep(1)
       retry if i<20
-      raise ex 
+      raise ex
     end
-    
+
   end
 
   # Clicks one element, and waits for the attribute of another element to change
@@ -265,7 +281,7 @@ class TelluriumDriver
   # ==== Examples
   #
   #    driver.click_and_wait_to_change("checkbox","score","text")
-  def click_and_wait_to_change(id_to_click,id_to_change,value) 
+  def click_and_wait_to_change(id_to_click,id_to_change,value)
     element_to_click = driver.find_element(:id, id_to_click)
     element_to_change = driver.find_element(:id, id_to_change)
     current_value = element_to_change.attribute(value.to_sym)
@@ -304,7 +320,7 @@ class TelluriumDriver
   #
   # Waits for the attribute "available" on the element with id: "drinks" to change
   # after filling an age selector to 21
-  # 
+  #
   #    driver.click_selector_and_wait("age","21","drinks","available")
   def click_selector_and_wait(id_to_click,selector_value,id_to_change,value)
     element_to_change = driver.find_element(:id => id_to_change)
@@ -312,7 +328,7 @@ class TelluriumDriver
 
     option = Selenium::WebDriver::Support::Select.new(driver.find_element(:id => id_to_click))
     option.select_by(:text, selector_value)
-      
+
     @wait.until { element_to_change.attribute(value.to_sym) != current_value }
   end
 
@@ -337,7 +353,7 @@ class TelluriumDriver
   end
 
   # Fills a text input of the given sym,id with a value
-  # 
+  #
   # ==== Attributes
   #
   # * +sym+ - :id, :css, or :name, etc
@@ -355,7 +371,7 @@ class TelluriumDriver
   # :nodoc:
   def send_keys_leasing(sym,id,value)
     self.wait_to_appear(sym,id)
-    self.driver.find_element(sym,id).send_keys(value) 
+    self.driver.find_element(sym,id).send_keys(value)
   end
   # :doc:
 
@@ -369,10 +385,10 @@ class TelluriumDriver
   # ===== OR
   #
   # * +sym1+ - :id, :css, or :name, etc for the element to click
-  # * +id1+ - The text corresponding with the symbol. 
+  # * +id1+ - The text corresponding with the symbol.
   # * +sym2+ - :id, :css, or :name, etc for the element to wait to exist
-  # * +id2+ - The text corresponding with the symbol. 
-  def click_and_wait_to_exist(*args) 
+  # * +id2+ - The text corresponding with the symbol.
+  def click_and_wait_to_exist(*args)
      case args.size
      when 2 #takes just two id's
        id1,id2 = args
@@ -445,7 +461,7 @@ class TelluriumDriver
   # Waits for the element specified by the identifiers then clicks where it should be
   #
   # ==== Attributes
-  # 
+  #
   # * +sym+ - :id, :css, or :name, etc
   # * +id+ - The text corresponding with the symbol.
   def wait_and_hover_click(sym,id)
@@ -453,15 +469,15 @@ class TelluriumDriver
   #wait until an element with sym,id is displayed. When it is, hover click it
     @wait.until {
       elements = driver.find_elements(sym, id)
-      elements.each do |element| 
+      elements.each do |element|
         if element.displayed?
           found = true
           @element = element
         end
-    
+
        end
       found == true
-    } 
+    }
     self.hover_click(@element)
   end
 
@@ -474,4 +490,4 @@ class TelluriumDriver
 
   end
 
-end 
+end
