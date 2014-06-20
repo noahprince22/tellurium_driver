@@ -2,6 +2,8 @@ PATH
   remote: .
   specs:
     tellurium_driver (1.2.4)
+      sauce
+      sauce-connect
 
 GEM
   remote: http://rubygems.org/
@@ -55,6 +57,4 @@ PLATFORMS
 DEPENDENCIES
   bundler (~> 1.3)
   rake
-  sauce
-  sauce-connect
   tellurium_driver!
