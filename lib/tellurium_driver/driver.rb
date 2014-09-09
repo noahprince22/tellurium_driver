@@ -42,7 +42,6 @@ module TelluriumDriver
     #    TelluriumDriver::Driver.new(browser: "internet explorer", version: "10", hub_ip: 192.168.1.1)
     def initialize(opts = {})
       opts[:timeout] = 120 unless opts[:timeout]
-      @wait = Selenium::WebDriver::Wait.new(:timeout=>opts[:timeout])
       TelluriumDriver::Driver.wait_for_document_ready=true;
 
       opts[:caps] ||= {}
@@ -60,10 +59,13 @@ module TelluriumDriver
           os: opts[:os],
           start_local_application: false
         )
+        @wait = Sauce::Selenium2.new(:timeout=>opts[:timeout])
       elsif is_local
         @driver = Selenium::WebDriver.for(opts[:browser].to_sym,:desired_capabilities=>opts[:caps])
+        @wait = Selenium::WebDriver::Wait.new(:timeout=>opts[:timeout])
       elsif !opts[:sauce]
         @driver = Selenium::WebDriver.for(:remote,:desired_capabilities=>opts[:caps],:url=> "http://#{opts[:hub_ip]}:4444/wd/hub")
+        @wait = Selenium::WebDriver::Wait.new(:timeout=>opts[:timeout])
       end
     end
 
@@ -203,6 +205,40 @@ module TelluriumDriver
      }
     end
 
+    #if the specified symbol and id point to multiple elements, we want to find the first visible one
+    def find_enabled_and_displayed_element(sym, id)
+      el = nil
+      found_element = false
+
+      @wait.until do
+        driver.find_elements(sym, id).shuffle.each do |element|
+          if element.displayed? and element.enabled?
+            el=element
+            found_element = true
+          end
+
+        end
+       found_element
+      end
+
+      return el
+    end
+
+    # Used to retry commands if a stale element ref thrown
+    def stale_ref_wrapper(sym, id, &block)
+      i = 0
+      begin
+        el = find_enabled_and_displayed_element(sym, id)
+
+        yield el
+
+      rescue Selenium::WebDriver::Error::StaleElementReferenceError => ex
+        sleep(1)
+        retry if i<3
+        raise ex
+      end
+    end
+
     # Waits for the element with specified identifiers to appear, then clicks it
     #
     # ==== Attributes
@@ -214,32 +250,17 @@ module TelluriumDriver
     #
     #    driver.wait_and_click(:name,"hello")
     def wait_and_click(sym, id)
-     found_element = false
-
-      #if the specified symbol and id point to multiple elements, we want to find the first visible one
-      #and click that
-      @wait.until do
-        driver.find_elements(sym,id).shuffle.each do |element|
-          if element.displayed? and element.enabled?
-            @element=element
-            found_element = true
-          end
-
+      stale_ref_wrapper(sym, id) do |element|
+        i = 0
+        begin
+          element.click
+        rescue Exception => ex
+          i+=1
+          sleep(1)
+          retry if i<20
+          raise ex
         end
-       found_element
       end
-
-      i = 0
-
-      begin
-        @element.click
-      rescue Exception => ex
-        i+=1
-        sleep(1)
-        retry if i<20
-        raise ex
-      end
-
     end
 
     # Waits for the given element to appear and clicks it
