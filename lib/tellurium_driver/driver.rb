@@ -200,8 +200,9 @@ module TelluriumDriver
     #    driver.wait_to_appear(:id,"hover-box")
     def wait_to_appear(sym,id)
      @wait.until {
-      element_arr = driver.find_elements(sym,id)
-      element_arr.size > 0 and element_arr[0].displayed? #wait until the element both exists and is displayed
+      stale_ref_wrapper(sym, id) do |element|
+        true
+      end
      }
     end
 
