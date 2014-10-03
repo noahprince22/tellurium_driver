@@ -228,6 +228,7 @@ module TelluriumDriver
     # Used to retry commands if a stale element ref thrown
     def stale_ref_wrapper(sym, id, &block)
       i = 0
+      tries = 0
       begin
         el = find_enabled_and_displayed_element(sym, id)
 
@@ -237,6 +238,11 @@ module TelluriumDriver
         sleep(1)
         retry if i<3
         raise ex
+      rescue Exception => e
+        tries+=1
+        el.location_once_scrolled_into_view
+        sleep(1)
+        retry if e.message.match(/Element is not clickable/) and tries < 3
       end
     end
 
@@ -378,9 +384,10 @@ module TelluriumDriver
       #self.wait_and_click(sym, id)
       #driver.action.send_keys(driver.find_element(sym => id),value).perform
       wait_to_appear(sym,id)
-      element = driver.find_element(sym,id)
-      element.click
-      element.send_keys(value)
+      stale_ref_wrapper(sym, id) do |element|
+        element.click
+        element.send_keys(value)
+      end
     end
 
     # :nodoc:
