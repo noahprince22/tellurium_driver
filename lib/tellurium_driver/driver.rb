@@ -244,6 +244,7 @@ module TelluriumDriver
           el.location_once_scrolled_into_view
           sleep(1)
           retry if e.message.match(/Element is not clickable/) and tries < 3
+          raise
         end
       end
     end
