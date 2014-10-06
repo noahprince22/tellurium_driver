@@ -239,10 +239,12 @@ module TelluriumDriver
         retry if i<3
         raise ex
       rescue Exception => e
-        tries+=1
-        el.location_once_scrolled_into_view
-        sleep(1)
-        retry if e.message.match(/Element is not clickable/) and tries < 3
+        if el
+          tries+=1
+          el.location_once_scrolled_into_view
+          sleep(1)
+          retry if e.message.match(/Element is not clickable/) and tries < 3
+        end
       end
     end
 
